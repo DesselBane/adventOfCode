@@ -21,6 +21,7 @@ fn extract_numbers_from_line(line: &str) -> Result<u32, &'static str> {
     Ok(first * 10 + last)
 }
 
+#[derive(Debug, Clone)]
 struct Match {
     value: &'static str,
     number_value: u32,
@@ -28,151 +29,78 @@ struct Match {
 }
 
 impl Match {
-    fn spawn_into(value: char, buf: &mut Vec<Match>) {
-        match value {
-            'o' => {
-                buf.push(Match {
-                    current_index: 0,
-                    value: "one",
-                    number_value: 1,
-                });
-            }
-            't' => {
-                buf.push(Match {
-                    current_index: 0,
-                    value: "two",
-                    number_value: 2,
-                });
-                buf.push(Match {
-                    current_index: 0,
-                    value: "three",
-                    number_value: 3,
-                });
-            }
-            'f' => {
-                buf.push(Match {
-                    current_index: 0,
-                    value: "four",
-                    number_value: 4,
-                });
+    const ALL_MATCHES: [Match; 9] = [
+        Match {
+            current_index: 0,
+            value: "one",
+            number_value: 1,
+        },
+        Match {
+            current_index: 0,
+            value: "two",
+            number_value: 2,
+        },
+        Match {
+            current_index: 0,
+            value: "three",
+            number_value: 3,
+        },
+        Match {
+            current_index: 0,
+            value: "four",
+            number_value: 4,
+        },
+        Match {
+            current_index: 0,
+            value: "five",
+            number_value: 5,
+        },
+        Match {
+            current_index: 0,
+            value: "six",
+            number_value: 6,
+        },
+        Match {
+            current_index: 0,
+            value: "seven",
+            number_value: 7,
+        },
+        Match {
+            current_index: 0,
+            value: "eight",
+            number_value: 8,
+        },
+        Match {
+            current_index: 0,
+            value: "nine",
+            number_value: 9,
+        },
+    ];
 
-                buf.push(Match {
-                    current_index: 0,
-                    value: "five",
-                    number_value: 5,
-                });
+    fn spawn_into(value: char, buf: &mut Vec<Match>, reverse: bool) {
+        for example_match in Match::ALL_MATCHES {
+            let char_value = if reverse {
+                example_match.value.chars().rev().nth(0)
+            } else {
+                example_match.value.chars().nth(0)
+            };
+
+            if char_value.unwrap() == value {
+                buf.push(example_match.clone())
             }
-            's' => {
-                buf.push(Match {
-                    current_index: 0,
-                    value: "six",
-                    number_value: 6,
-                });
-                buf.push(Match {
-                    current_index: 0,
-                    value: "seven",
-                    number_value: 7,
-                });
-            }
-            'e' => {
-                buf.push(Match {
-                    current_index: 0,
-                    value: "eight",
-                    number_value: 8,
-                });
-            }
-            'n' => {
-                buf.push(Match {
-                    current_index: 0,
-                    value: "nine",
-                    number_value: 9,
-                });
-            }
-            _ => {}
         }
     }
 
-    fn rspawn_into(value: char, buf: &mut Vec<Match>) {
-        match value {
-            't' => {
-                buf.push(Match {
-                    current_index: 0,
-                    value: "eight",
-                    number_value: 8,
-                });
-            }
-            'o' => {
-                buf.push(Match {
-                    current_index: 0,
-                    value: "two",
-                    number_value: 2,
-                });
-            }
-            'e' => {
-                buf.push(Match {
-                    current_index: 0,
-                    value: "one",
-                    number_value: 1,
-                });
-                buf.push(Match {
-                    current_index: 0,
-                    value: "three",
-                    number_value: 3,
-                });
-                buf.push(Match {
-                    current_index: 0,
-                    value: "five",
-                    number_value: 5,
-                });
-                buf.push(Match {
-                    current_index: 0,
-                    value: "nine",
-                    number_value: 9,
-                });
-            }
-            'r' => {
-                buf.push(Match {
-                    current_index: 0,
-                    value: "four",
-                    number_value: 4,
-                });
-            }
-            'x' => {
-                buf.push(Match {
-                    current_index: 0,
-                    value: "six",
-                    number_value: 6,
-                });
-            }
-            'n' => {
-                buf.push(Match {
-                    current_index: 0,
-                    value: "seven",
-                    number_value: 7,
-                });
-            }
-            _ => {}
-        }
-    }
-
-    fn advance(mut self, value: char) -> Option<Self> {
+    fn advance(mut self, value: char, reverse: bool) -> Option<Self> {
         self.current_index += 1;
 
-        match self.value.chars().nth(self.current_index) {
-            None => None,
-            Some(c) => {
-                if c == value {
-                    return Some(self);
-                }
-                None
-            }
-        }
-    }
+        let char_at_index = if reverse {
+            self.value.chars().rev().nth(self.current_index)
+        } else {
+            self.value.chars().nth(self.current_index)
+        };
 
-    fn radvance(mut self, value: char) -> Option<Self> {
-        self.current_index += 1;
-
-        match self.value.chars().rev().nth(self.current_index) {
+        match char_at_index {
             None => None,
             Some(c) => {
                 if c == value {
@@ -196,51 +124,27 @@ pub fn puzzle2() -> Result<u32, &'static str> {
 }
 
 fn extract_numbers_and_spelled_numbers_from_line(line: &str) -> Result<u32, &'static str> {
-    let first = find_number(line).ok_or("Could not find first digit")?;
-
-    let last = rfind_number(line).ok_or("Could not find last digit")?;
+    let first = find_number(line, false).ok_or("Could not find first digit")?;
+    let last = find_number(line, true).ok_or("Could not find last digit")?;
 
     Ok(first * 10 + last)
 }
 
-fn find_number(line: &str) -> Option<u32> {
-    let mut matches: Vec<Match> = Vec::with_capacity(10);
-
-    for c in line.chars() {
-        // check for simple numbers
-        if c.is_numeric() {
-            return c.to_digit(10);
-        }
-
-        let mut local_matches: Vec<Match> = Vec::with_capacity(matches.capacity());
-
-        // Advance all current matches
-        while let Some(m) = matches.pop() {
-            let advanced_match = m.advance(c);
-            match advanced_match {
-                None => continue,
-                Some(new_match) => {
-                    if new_match.is_complete() {
-                        return Some(new_match.number_value);
-                    }
-                    local_matches.push(new_match)
-                }
-            }
-        }
-
-        //Spawn new matches
-        Match::spawn_into(c, &mut local_matches);
-
-        matches = local_matches;
+fn find_number(line: &str, reverse: bool) -> Option<u32> {
+    if reverse {
+        find_number_for_iter(line.chars().rev(), reverse)
+    } else {
+        find_number_for_iter(line.chars(), reverse)
     }
-
-    None
 }
 
-fn rfind_number(line: &str) -> Option<u32> {
+fn find_number_for_iter<TIter>(char_iter: TIter, reverse: bool) -> Option<u32>
+where
+    TIter: Iterator<Item = char>,
+{
     let mut matches: Vec<Match> = Vec::with_capacity(10);
 
-    for c in line.chars().rev() {
+    for c in char_iter {
         // check for simple numbers
         if c.is_numeric() {
             return c.to_digit(10);
@@ -250,7 +154,7 @@ fn rfind_number(line: &str) -> Option<u32> {
 
         // Advance all current matches
         while let Some(m) = matches.pop() {
-            let advanced_match = m.radvance(c);
+            let advanced_match = m.advance(c, reverse);
             match advanced_match {
                 None => continue,
                 Some(new_match) => {
@@ -263,7 +167,7 @@ fn rfind_number(line: &str) -> Option<u32> {
         }
 
         //Spawn new matches
-        Match::rspawn_into(c, &mut local_matches);
+        Match::spawn_into(c, &mut local_matches, reverse);
 
         matches = local_matches;
     }
@@ -313,10 +217,25 @@ mod tests {
             number_value: 1,
         };
 
-        let match_one = match_one.advance('n').unwrap();
+        let match_one = match_one.advance('n', false).unwrap();
         assert!(!match_one.is_complete());
 
-        let match_one = match_one.advance('e').unwrap();
+        let match_one = match_one.advance('e', false).unwrap();
+        assert!(match_one.is_complete());
+    }
+
+    #[test]
+    fn it_advances_in_reverse_and_completes() {
+        let match_one = Match {
+            current_index: 0,
+            value: "one",
+            number_value: 1,
+        };
+
+        let match_one = match_one.advance('n', true).unwrap();
+        assert!(!match_one.is_complete());
+
+        let match_one = match_one.advance('o', true).unwrap();
         assert!(match_one.is_complete());
     }
 }
