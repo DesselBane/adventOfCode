@@ -1,4 +1,6 @@
 use crate::days::input::PUZZLE_1_INPUT;
+use std::iter::Rev;
+use std::str::Chars;
 
 pub fn puzzle1() -> Result<u32, &'static str> {
     PUZZLE_1_INPUT
@@ -130,7 +132,7 @@ fn extract_numbers_and_spelled_numbers_from_line(line: &str) -> Result<u32, &'st
     Ok(first * 10 + last)
 }
 
-fn find_number(line: &str, reverse: bool) -> Option<u32> {
+pub fn find_number(line: &str, reverse: bool) -> Option<u32> {
     if reverse {
         find_number_for_iter(line.chars().rev(), reverse)
     } else {
@@ -145,6 +147,154 @@ where
     let mut matches: Vec<Match> = Vec::with_capacity(10);
 
     for c in char_iter {
+        // check for simple numbers
+        if c.is_numeric() {
+            return c.to_digit(10);
+        }
+
+        let mut local_matches: Vec<Match> = Vec::with_capacity(matches.capacity());
+
+        // Advance all current matches
+        while let Some(m) = matches.pop() {
+            let advanced_match = m.advance(c, reverse);
+            match advanced_match {
+                None => continue,
+                Some(new_match) => {
+                    if new_match.is_complete() {
+                        return Some(new_match.number_value);
+                    }
+                    local_matches.push(new_match)
+                }
+            }
+        }
+
+        //Spawn new matches
+        Match::spawn_into(c, &mut local_matches, reverse);
+
+        matches = local_matches;
+    }
+
+    None
+}
+
+enum CharsOrReveresed<'a> {
+    Chars(Chars<'a>),
+    Rev(Rev<Chars<'a>>),
+}
+
+/*impl Deref for CharsOrReveresed<'_> {
+    type Target = dyn Iterator<Item = char>;
+
+    fn deref(&self) -> &Self::Target {
+        match self {
+            CharsOrReveresed::Chars(c) => c,
+            CharsOrReveresed::Rev(r) => &r.clone(),
+        }
+    }
+}*/
+
+impl Iterator for CharsOrReveresed<'_> {
+    type Item = char;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self {
+            CharsOrReveresed::Chars(c) => c.next(),
+            CharsOrReveresed::Rev(r) => r.next(),
+        }
+    }
+}
+
+fn find_number_boxed(line: &str, reverse: bool) -> Option<u32> {
+    let char_iter: Box<dyn Iterator<Item = char>> = if reverse {
+        Box::new(line.chars())
+    } else {
+        Box::new(line.chars().rev())
+    };
+
+    let mut matches: Vec<Match> = Vec::with_capacity(10);
+
+    for c in char_iter {
+        // check for simple numbers
+        if c.is_numeric() {
+            return c.to_digit(10);
+        }
+
+        let mut local_matches: Vec<Match> = Vec::with_capacity(matches.capacity());
+
+        // Advance all current matches
+        while let Some(m) = matches.pop() {
+            let advanced_match = m.advance(c, reverse);
+            match advanced_match {
+                None => continue,
+                Some(new_match) => {
+                    if new_match.is_complete() {
+                        return Some(new_match.number_value);
+                    }
+                    local_matches.push(new_match)
+                }
+            }
+        }
+
+        //Spawn new matches
+        Match::spawn_into(c, &mut local_matches, reverse);
+
+        matches = local_matches;
+    }
+
+    None
+}
+
+fn find_number_enum(line: &str, reverse: bool) -> Option<u32> {
+    let base: CharsOrReveresed = if reverse {
+        CharsOrReveresed::Rev(line.chars().rev())
+    } else {
+        CharsOrReveresed::Chars(line.chars())
+    };
+
+    let mut matches: Vec<Match> = Vec::with_capacity(10);
+
+    // TODO ohne impl Iterator => deref trait
+
+    for c in base {
+        // check for simple numbers
+        if c.is_numeric() {
+            return c.to_digit(10);
+        }
+
+        let mut local_matches: Vec<Match> = Vec::with_capacity(matches.capacity());
+
+        // Advance all current matches
+        while let Some(m) = matches.pop() {
+            let advanced_match = m.advance(c, reverse);
+            match advanced_match {
+                None => continue,
+                Some(new_match) => {
+                    if new_match.is_complete() {
+                        return Some(new_match.number_value);
+                    }
+                    local_matches.push(new_match)
+                }
+            }
+        }
+
+        //Spawn new matches
+        Match::spawn_into(c, &mut local_matches, reverse);
+
+        matches = local_matches;
+    }
+
+    None
+}
+
+fn find_number_ref(line: &str, reverse: bool) -> Option<u32> {
+    let mut chars = line.chars();
+    let mut rev = line.chars().rev();
+
+    let base: &mut dyn Iterator<Item = char> = if reverse { &mut rev } else { &mut chars };
+
+    let mut matches: Vec<Match> = Vec::with_capacity(10);
+
+    for c in base {
         // check for simple numbers
         if c.is_numeric() {
             return c.to_digit(10);
@@ -237,5 +387,31 @@ mod tests {
 
         let match_one = match_one.advance('o', true).unwrap();
         assert!(match_one.is_complete());
+    }
+}
+
+#[cfg(test)]
+mod bench {
+    use super::*;
+    use test::Bencher;
+
+    #[bench]
+    fn bench_find_number_generic(b: &mut Bencher) {
+        b.iter(|| find_number("7pqrstsixteen", false))
+    }
+
+    #[bench]
+    fn bench_find_number_boxed(b: &mut Bencher) {
+        b.iter(|| find_number_boxed("7pqrstsixteen", false))
+    }
+
+    #[bench]
+    fn bench_find_number_enum(b: &mut Bencher) {
+        b.iter(|| find_number_enum("7pqrstsixteen", false))
+    }
+
+    #[bench]
+    fn bench_find_number_ref(b: &mut Bencher) {
+        b.iter(|| find_number_ref("7pqrstsixteen", false))
     }
 }

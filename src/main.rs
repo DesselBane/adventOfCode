@@ -1,3 +1,6 @@
+#![feature(test)]
+extern crate test;
+
 use crate::days::day1::{puzzle1, puzzle2};
 
 #[allow(dead_code)]
